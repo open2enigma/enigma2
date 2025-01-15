@@ -1,69 +1,85 @@
-from os import path
 from fcntl import ioctl
 from struct import pack, unpack
 from time import time, localtime, gmtime
+from os import path
 
 
 def getFPVersion():
 	ret = None
 	try:
-		ret = open("/proc/stb/fp/version", "r").read()
+		ret = int(open("/proc/stb/fp/version", "r").read())
 	except IOError:
 		try:
 			fp = open("/dev/dbox/fp0")
 			ret = ioctl(fp.fileno(), 0)
+			fp.close()
 		except IOError:
-			try:
-				ret = open("/sys/firmware/devicetree/base/bolt/tag", "r").read().rstrip("\0")
-			except:
-				print("getFPVersion failed!")
+			print("[StbHardware] Error: getFPVersion failed!")
 	return ret
 
 
 def setFPWakeuptime(wutime):
 	try:
-		open("/proc/stb/fp/wakeup_time", "w").write(str(wutime))
+		f = open("/proc/stb/fp/wakeup_time", "w")
+		f.write(str(wutime))
+		f.close()
 	except IOError:
 		try:
 			fp = open("/dev/dbox/fp0")
-			ioctl(fp.fileno(), 6, pack('L', wutime)) # set wake up
+			ioctl(fp.fileno(), 6, pack('L', wutime))  # set wake up
+			fp.close()
 		except IOError:
-			print("setFPWakeupTime failed!")
+			print("[StbHardware] Error: setFPWakeupTime failed!")
 
 
-def setRTCoffset(forsleep=None):
-	if forsleep is None:
-		forsleep = (localtime(time()).tm_hour - gmtime(time()).tm_hour) * 3600
+def setRTCoffset():
+	from Components.config import config
+	import time
+	if time.localtime().tm_isdst == 0:
+		forsleep = 7200 + time.timezone
+	else:
+		forsleep = 3600 - time.timezone
+
+	t_local = time.localtime(int(time.time()))
+
+	print("[StbHardware] Set RTC to %s (rtc_offset = %s sec.)" % (time.strftime(config.usage.date.daylong.value + "  " + config.usage.time.short.value, t_local), forsleep))
+
+	# Set RTC OFFSET (diff. between UTC and Local Time)
 	try:
 		open("/proc/stb/fp/rtc_offset", "w").write(str(forsleep))
-		print("[RTC] set RTC offset to %s sec." % (forsleep))
 	except IOError:
-		print("setRTCoffset failed!")
+		print("[StbHardware] Error: setRTCoffset failed!")
 
 
 def setRTCtime(wutime):
 	if path.exists("/proc/stb/fp/rtc_offset"):
 		setRTCoffset()
 	try:
-		open("/proc/stb/fp/rtc", "w").write(str(wutime))
+		f = open("/proc/stb/fp/rtc", "w")
+		f.write(str(wutime))
+		f.close()
 	except IOError:
 		try:
 			fp = open("/dev/dbox/fp0")
-			ioctl(fp.fileno(), 0x101, pack('L', wutime)) # set wake up
+			ioctl(fp.fileno(), 0x101, pack('L', wutime))  # set wake up
+			fp.close()
 		except IOError:
-			print("setRTCtime failed!")
+			print("[StbHardware] Error: setRTCtime failed!")
 
 
 def getFPWakeuptime():
 	ret = 0
 	try:
-		ret = open("/proc/stb/fp/wakeup_time", "r").read()
+		f = open("/proc/stb/fp/wakeup_time", "r")
+		ret = int(f.read())
+		f.close()
 	except IOError:
 		try:
 			fp = open("/dev/dbox/fp0")
-			ret = unpack('L', ioctl(fp.fileno(), 5, '    '))[0] # get wakeuptime
+			ret = unpack('L', ioctl(fp.fileno(), 5, '    '))[0]  # get wakeuptime
+			fp.close()
 		except IOError:
-			print("getFPWakeupTime failed!")
+			print("[StbHardware] Error: getFPWakeupTime failed!")
 	return ret
 
 
@@ -76,13 +92,17 @@ def getFPWasTimerWakeup():
 		return wasTimerWakeup
 	wasTimerWakeup = False
 	try:
-		wasTimerWakeup = int(open("/proc/stb/fp/was_timer_wakeup", "r").read()) and True or False
+		f = open("/proc/stb/fp/was_timer_wakeup", "r")
+		file = f.read()
+		f.close()
+		wasTimerWakeup = int(file) and True or False
 	except:
 		try:
 			fp = open("/dev/dbox/fp0")
 			wasTimerWakeup = unpack('B', ioctl(fp.fileno(), 9, ' '))[0] and True or False
+			fp.close()
 		except IOError:
-			print("wasTimerWakeup failed!")
+			print("[StbHardware] Error: getFPWasTimerWakeup failed!")
 	if wasTimerWakeup:
 		# clear hardware status
 		clearFPWasTimerWakeup()
@@ -91,10 +111,13 @@ def getFPWasTimerWakeup():
 
 def clearFPWasTimerWakeup():
 	try:
-		open("/proc/stb/fp/was_timer_wakeup", "w").write('0')
+		f = open("/proc/stb/fp/was_timer_wakeup", "w")
+		f.write('0')
+		f.close()
 	except:
 		try:
 			fp = open("/dev/dbox/fp0")
 			ioctl(fp.fileno(), 10)
+			fp.close()
 		except IOError:
-			print("clearFPWasTimerWakeup failed!")
+			print("[StbHardware] Error: clearFPWasTimerWakeup failed!")

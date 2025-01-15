@@ -38,13 +38,14 @@ class About(Screen):
 		AboutText += _("Image: ") + about.getImageTypeString() + "\n"
 		AboutText += _("OE Version: ") + about.getOEVersionString() + "\n"
 		AboutText += _("Build date: ") + about.getBuildDateString() + "\n"
-		AboutText += _("Last update: ") + about.getUpdateDateString() + "\n"
+		ImageVersion = _("Last update: ") + about.getImageVersionString()
+		self["ImageVersion"] = StaticText(ImageVersion)
+		AboutText += ImageVersion + "\n"
 
 		# [WanWizard] Removed until we find a reliable way to determine the installation date
 		# AboutText += _("Installed: ") + about.getFlashDateString() + "\n"
 
-		EnigmaVersion = about.getEnigmaVersionString()
-		EnigmaVersion = "%s%s (%s)" % (_("Enigma version: "), EnigmaVersion[:10], EnigmaVersion[11:])
+		EnigmaVersion = _("Enigma version: ") + about.getEnigmaVersionString()
 		self["EnigmaVersion"] = StaticText(EnigmaVersion)
 		AboutText += "\n" + EnigmaVersion + "\n"
 
@@ -59,23 +60,28 @@ class About(Screen):
 		self["ffmpegVersion"] = StaticText(ffmpegVersion)
 
 		player = None
-
-		if os.path.isfile('/var/lib/opkg/info/enigma2-plugin-systemplugins-servicemp3.list'):
-			if GStreamerVersion:
-				player = _("Media player") + ": Gstreamer, " + _("version") + " " + GStreamerVersion
-		if os.path.isfile('/var/lib/opkg/info/enigma2-plugin-systemplugins-servicehisilicon.list'):
-			if os.path.isdir("/usr/lib/hisilicon") and glob.glob("/usr/lib/hisilicon/libavcodec.so.*"):
-				player = _("Media player") + ": ffmpeg, " + _("Hardware Accelerated")
-			elif ffmpegVersion and ffmpegVersion[0].isdigit():
-				player = _("Media player") + ": ffmpeg, " + _("version") + " " + ffmpegVersion
-
 		if player is None:
-				player = _("Media player") + ": " + _("Not Installed")
+			if GStreamerVersion:
+				player = _("Gstreamer multimedia framework") + ": Gstreamer, " + _("version") + " " + GStreamerVersion
+			else:
+				player = _("Gstreamer multimedia framework") + ": " + _("Not Installed")
+
+		player2 = None
+		if player2 is None:
+			if ffmpegVersion:
+				player2 = _("FFmpeg multimedia framework") + ": FFmpeg, " + _("version") + " " + ffmpegVersion
+			else:
+				player2 = _("FFmpeg multimedia framework") + ": " + _("Not Installed")
 
 		AboutText += player + "\n"
 
+		AboutText += player2 + "\n"
+
+		AboutText += _("Cryptography & SSL/TLS Toolkit: ") + "OpenSSL " + about.getOpenSSLVersion() + "\n"
+
 		AboutText += _("Python version: ") + about.getPythonVersionString() + "\n"
 
+		AboutText += "\n"
 		AboutText += _("Enigma (re)starts: %d\n") % config.misc.startCounter.value
 		AboutText += _("Uptime: %s\n") % about.getBoxUptime()
 		AboutText += _("Enigma debug level: %d\n") % eGetEnigmaDebugLvl()
@@ -217,7 +223,7 @@ class CommitInfo(Screen):
 
 		# get the branch to display from the Enigma version
 		try:
-			branch = f"?sha={about.getEnigmaBranchString()}"
+			branch = "?sha=" + about.getEnigmaVersionString().split("(")[1].split(")")[0].lower()
 		except:
 			branch = ""
 		branch_e2plugins = "?sha=python3"
