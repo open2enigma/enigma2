@@ -25,6 +25,7 @@ class CurrentService(PerServiceBase, Source):
 		self.navcore = navcore
 		self.srv = None
 		self.info = None
+		self.ref = None
 		self.onManualNewService = []
 
 	def serviceEvent(self, event):
@@ -40,11 +41,16 @@ class CurrentService(PerServiceBase, Source):
 
 	@cached
 	def getCurrentServiceRef(self):
+		if self.ref:
+			return self.ref
 		if NavigationInstance.instance is not None:
 			return self.srv or NavigationInstance.instance.getCurrentlyPlayingServiceOrGroup()
 		return None
 
-	serviceref = property(getCurrentServiceRef)
+	def setCurrentServiceRef(self, ref):
+		self.ref = ref
+
+	serviceref = property(getCurrentServiceRef, setCurrentServiceRef)
 
 	def newService(self, ref):
 		if ref and isinstance(ref, bool):
